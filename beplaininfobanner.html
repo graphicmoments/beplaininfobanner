@@ -1,0 +1,1239 @@
+<meta charset="utf-8">
+<title>beplain INFO GENERATOR</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap');
+  /* ════════════════════════════════════════════════════════════════
+     제품 라인별 배경 컬러 토큰
+     ── 여기 한 줄만 추가하면 아래 라인 목록에 자동으로 나타납니다.
+     ── 이름은 반드시 '라인' 으로 끝나야 인식됩니다.
+     ── 이름 안의 '-' 는 화면에서 ' / ' 로 표시됩니다.
+     ════════════════════════════════════════════════════════════════ */
+  /* 제품 라인 컬러는 JS 의 LINES 배열에서 관리합니다 (13개, 제품명 자동 매칭 포함) */
+
+  /* ---------- UI ---------- */
+  :root{
+    --paper:#ffffff; --card:#fff; --line:#d6d3cd; --line-soft:#e6e3dd;
+    --ink:#17191c; --ink-2:#5c5f66; --ink-3:#8b8e95;
+    --accent:#000000; --accent-soft:#ececec;
+    --warn:#8a5a12; --warn-soft:#fbf1dd;
+    --err:#8c2f2a;  --err-soft:#fbeae8;
+    --r:4px;
+    --ui:'Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',
+         'Malgun Gothic','Noto Sans KR',sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--ui);
+       font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;
+       font-feature-settings:'tnum' 1}
+  .wrap{display:grid;grid-template-columns:376px minmax(0,1fr);gap:20px;
+        max-width:1560px;margin:0 auto;padding:20px}
+  @media (max-width:1080px){.wrap{grid-template-columns:1fr}}
+
+  .topbar{width:100%;background:#ffffff;padding:27px 20px;text-align:center}
+  .topbar h1{margin:0;color:#000000;font-weight:600;font-size:27px;letter-spacing:-.01em;
+             text-align:center;font-family:'Poppins',sans-serif}
+
+  .modebar{grid-column:1/-1;display:flex;gap:6px;padding:12px 2px 0}
+  .modetab{flex:1;padding:9px 14px;border:1px solid var(--line);background:#fff;
+           border-radius:var(--r);font-size:13px;font-weight:700;color:var(--ink-2);
+           cursor:pointer;transition:.12s}
+  .modetab:hover{border-color:#b5b2ab}
+  .modetab[aria-selected=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  .comp{border:1px solid var(--line-soft);border-radius:var(--r);padding:10px;
+        display:flex;gap:10px;align-items:flex-start;background:#fff}
+  .comp+.comp{margin-top:8px}
+  .comp .minidrop{flex:none;width:64px;height:64px;border:1px dashed var(--line);
+        border-radius:3px;background:#fff;cursor:pointer;display:flex;
+        align-items:center;justify-content:center;overflow:hidden;position:relative;
+        background-image:linear-gradient(45deg,#eceae5 25%,transparent 25%,transparent 75%,#eceae5 75%),
+                         linear-gradient(45deg,#eceae5 25%,transparent 25%,transparent 75%,#eceae5 75%);
+        background-size:8px 8px;background-position:0 0,4px 4px}
+  .comp .minidrop img{width:100%;height:100%;object-fit:contain}
+  .comp .minidrop span{font-size:9.5px;color:var(--ink-3);text-align:center;line-height:1.3;padding:2px}
+  .comp .fields{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+  .comp .fields .row2{display:flex;gap:6px}
+  .comp .fields input{font-size:12px;padding:6px 8px}
+  .comp .fields input.name{flex:1.4}
+  .comp .fields input.vol{flex:1}
+  .comp .fields input.tag{flex:1;color:var(--accent)}
+  .comp .rm{flex:none;width:22px;height:22px;border:1px solid var(--line);background:#fff;
+        border-radius:3px;color:var(--ink-3);cursor:pointer;font-size:13px;line-height:1;
+        padding:0;display:flex;align-items:center;justify-content:center}
+  .comp .rm:hover{border-color:var(--err);color:var(--err)}
+  .mfg{display:flex;gap:6px;align-items:center}
+  .mfg+.mfg{margin-top:6px}
+  .mfg input.mlabel{flex:1}
+  .mfg input.mtext{flex:1.6}
+  .req::after{content:' *';color:var(--err)}
+
+  .rail{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
+  .card>header{display:flex;align-items:center;gap:9px;padding:11px 14px;
+               border-bottom:1px solid var(--line-soft)}
+  .num{flex:none;width:19px;height:19px;border-radius:50%;background:var(--accent);
+       color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;line-height:1}
+  .num.off{background:#c3c0b9}
+  .card>header h2{margin:0;font-size:13.5px;font-weight:700;letter-spacing:-.02em}
+  .card>header .tail{margin-left:auto;font-size:11.5px;color:var(--ink-3);
+                     max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .body{padding:13px 14px}
+  .body+.body{border-top:1px solid var(--line-soft)}
+
+  .drop{border:1px dashed var(--line);border-radius:var(--r);background:#fff;
+        padding:16px 12px;text-align:center;cursor:pointer;transition:.12s;
+        display:flex;flex-direction:column;align-items:center;gap:6px}
+  .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+  .drop b{font-size:12.5px;font-weight:600}
+  .drop span{font-size:11.5px;color:var(--ink-3);line-height:1.4}
+  .drop.has{padding:9px;border-style:solid;background:#fff;flex-direction:row;
+            text-align:left;gap:10px}
+  .thumb{flex:none;width:52px;height:52px;border-radius:3px;border:1px solid var(--line-soft);
+    background-color:#fff;
+    background-image:linear-gradient(45deg,#eceae5 25%,transparent 25%,transparent 75%,#eceae5 75%),
+                     linear-gradient(45deg,#eceae5 25%,transparent 25%,transparent 75%,#eceae5 75%);
+    background-size:10px 10px;background-position:0 0,5px 5px}
+  .thumb img{width:100%;height:100%;object-fit:contain;display:block}
+  .meta{min-width:0;flex:1}
+  .meta b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;
+          overflow:hidden;text-overflow:ellipsis}
+  .meta span{font-size:11.5px;color:var(--ink-3)}
+
+  label.f{display:block;font-size:11.5px;color:var(--ink-2);margin:0 0 7px;font-weight:600}
+  .row{display:flex;gap:8px;align-items:center}
+  button,.linkbtn{font-family:inherit;font-size:12.5px;font-weight:600;letter-spacing:-.01em;
+         border:1px solid var(--line);background:#fff;color:var(--ink);
+         padding:8px 13px;border-radius:var(--r);cursor:pointer;transition:.12s;
+         box-sizing:border-box;display:inline-block;text-decoration:none;text-align:center}
+  button:hover:not(:disabled),.linkbtn:hover{border-color:#b5b2ab;background:#faf9f7}
+  button:disabled{opacity:.42;cursor:not-allowed}
+  button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.pri:hover:not(:disabled){background:#262626;border-color:#262626}
+  button.wide,.linkbtn.wide{width:100%}
+  button:focus-visible,.linkbtn:focus-visible,.drop:focus-visible,textarea:focus-visible,select:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px}
+  input[type=text],textarea,select{font-family:inherit;font-size:12.5px;color:var(--ink);
+    border:1px solid var(--line);border-radius:var(--r);padding:7px 9px;background:#fff;width:100%}
+  textarea{line-height:1.6;resize:vertical}
+
+  .lines{display:flex;flex-wrap:wrap;gap:6px}
+  .lineopt{display:inline-flex;align-items:center;gap:6px;text-align:left;
+           padding:5px 10px 5px 7px;border:1px solid var(--line);border-radius:999px;
+           background:#fff;cursor:pointer;font-size:12px;font-weight:500;
+           color:var(--ink);max-width:100%}
+  .lineopt:hover{border-color:#b5b2ab;background:#faf9f7}
+  .lineopt[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft);
+           font-weight:700;color:var(--ink)}
+  .chip{flex:none;width:12px;height:12px;border-radius:50%;
+        border:1px solid rgba(0,0,0,.18)}
+  .lineopt .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .chip-link{display:inline-flex;align-items:center;justify-content:center;
+           padding:6px 14px;border:1px solid var(--line);border-radius:999px;
+           background:#fff;cursor:pointer;font-size:12px;font-weight:600;
+           color:var(--ink);text-decoration:none}
+  .chip-link:hover{border-color:#b5b2ab;background:#faf9f7}
+
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  .seg button{border:0;border-radius:0;padding:7px 13px;background:#fff}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+
+  .note{font-size:11.5px;color:var(--ink-3);line-height:1.5;margin:9px 0 0}
+  .flag{font-size:11.5px;line-height:1.5;padding:8px 10px;border-radius:3px;margin-top:9px}
+  .flag.w{background:var(--warn-soft);color:var(--warn)}
+  .flag.e{background:var(--err-soft);color:var(--err)}
+  .flag.k{background:var(--accent-soft);color:var(--accent)}
+  .fontline{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2)}
+  .dot{width:7px;height:7px;border-radius:50%;background:#c3c0b9;flex:none}
+  .dot.on{background:var(--accent)}
+  .dot.warn{background:#c9962f}
+
+  .stage{position:sticky;top:20px;align-self:start;min-width:0}
+  .stagebar{display:flex;align-items:center;gap:10px;padding:0 2px 9px}
+  .stagebar h2{margin:0;font-size:13.5px;font-weight:700;letter-spacing:-.02em}
+  .dims{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+  .stagebar .sp{margin-left:auto}
+  .frame{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+         padding:14px;overflow:auto;max-height:calc(100vh - 118px)}
+  #preview{display:block;width:100%;height:auto;border:1px solid var(--line-soft)}
+  .empty{display:grid;place-items:center;height:380px;color:var(--ink-3);font-size:12.5px;
+         text-align:center;line-height:1.7}
+
+  .spin{display:inline-block;width:12px;height:12px;border:2px solid currentColor;
+        border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;
+        vertical-align:-1px;margin-right:6px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.spin{animation-duration:2.4s}}
+  .hide{display:none!important}
+  input[type=file]{display:none}
+  .chk{font-size:12px;display:flex;gap:6px;align-items:center;cursor:pointer}
+  .chk input{margin:0}
+</style>
+
+<header class="topbar">
+  <h1>beplain INFO GENERATOR</h1>
+</header>
+
+<div class="wrap">
+  <div class="rail">
+    <section class="card" id="panelImg">
+      <header><span class="num">1</span><h2 id="imgHeading">제품 누끼컷</h2><span class="tail" id="imgTail"></span></header>
+      <div class="body" id="imgSingle">
+        <div class="drop" id="dropCut" tabindex="0" role="button" aria-label="제품 누끼컷 업로드">
+          <b>제품 이미지 올리기</b>
+          <span>투명 PNG 권장</span>
+        </div>
+        <input type="file" id="fileCut" accept="image/*">
+      </div>
+      <div class="body hide" id="imgSet">
+        <label class="f">브랜드</label>
+        <input type="text" id="setBrand" placeholder="예: 비플레인" style="margin-bottom:10px">
+        <label class="f">구성품 <span style="font-weight:400;color:var(--ink-3)">— 이미지·제품명·용량을 함께 입력</span></label>
+        <div id="compList"></div>
+        <button class="wide" id="btnAddComp" style="margin-top:8px">+ 구성품 추가</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <header><span class="num">2</span><h2>상품정보 텍스트</h2>
+        <span class="tail" id="cntTail"></span></header>
+      <div class="body">
+        <a href="https://docs.google.com/spreadsheets/d/16DCGy6E7IU5STMNAf5_lNicj4oNd4H26KTOPFMcTq4Y/edit?usp=sharing"
+           target="_blank" rel="noopener noreferrer" class="chip-link" style="margin-bottom:9px">
+          상품정보 불러오기
+        </a>
+        <textarea id="pasteText" rows="12" spellcheck="false"
+          placeholder="상품정보를 복사한 후 붙여넣으세요."></textarea>
+        <div class="row" style="margin-top:9px">
+          <button class="pri" id="btnPasteRun" style="flex:1">배너 만들기</button>
+          <button id="btnClear">지우기</button>
+        </div>
+        <div id="readFlag"></div>
+        <div class="body hide" id="mfgWrap" style="padding:0;border:0;margin-top:10px">
+          <label class="f">화장품제조업자 <span style="font-weight:400;color:var(--ink-3)">— 세트는 제조사가 여러 곳일 수 있습니다</span></label>
+          <div id="mfgList"></div>
+          <button class="wide" id="btnAddMfg" style="margin-top:8px">+ 제조업자 추가</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <header><span class="num off" id="n3">3</span><h2>제품 라인</h2>
+        <span class="tail" id="lineTail"></span></header>
+      <div class="body">
+        <div class="lines" id="lines" role="group" aria-label="제품 라인 선택"></div>
+      </div>
+      <div class="body">
+        <label class="f">본문 색</label>
+        <div class="seg" role="group" aria-label="본문 색">
+          <button id="tAuto" aria-pressed="true">자동</button>
+          <button id="tWhite" aria-pressed="false">화이트</button>
+          <button id="tBlack" aria-pressed="false">블랙</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <header><span class="num off" id="n4">4</span><h2>내보내기</h2></header>
+      <div class="body">
+        <button class="pri wide" id="btnSave" disabled>이미지 저장</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="stage">
+    <span id="dims" class="hide"></span>
+    <span id="statusTxt" class="hide"></span>
+    <div class="frame">
+      <div class="empty" id="empty">
+        상품정보 텍스트를 붙여넣고 '배너 만들기'를 누르면<br>여기에 배너가 생성됩니다
+      </div>
+      <canvas id="preview" class="hide"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+/* ══════════════════════════════════════════════════════════════════
+   서체 — 자동 로딩
+   ──────────────────────────────────────────────────────────────────
+   ① EMBEDDED 에 base64 를 채우면 HTML 파일 하나로 완결됩니다 (권장).
+        EMBEDDED[400] = 'data:font/otf;base64,AAEAAA…';
+      폰트 파일을 주시면 여기에 심어 드립니다.
+   ② 비어 있으면 HTML 옆 fonts/ 폴더에서 자동으로 찾습니다.
+   ③ 둘 다 없으면 시스템 한글 서체로 렌더링합니다.
+   ══════════════════════════════════════════════════════════════════ */
+const FAMILY_NAME = 'SandollGothicNeo1';
+const EMBEDDED = { /* 300:'', 400:'', 500:'', 600:'', 700:'' */ };
+const AUTO_PATHS = {
+  300:['fonts/SandollGothicNeo1-Light.otf','fonts/SandollGothicNeo1Light.otf'],
+  400:['fonts/SandollGothicNeo1-Regular.otf','fonts/SandollGothicNeo1.otf'],
+  500:['fonts/SandollGothicNeo1-Medium.otf'],
+  600:['fonts/SandollGothicNeo1-SemiBold.otf','fonts/SandollGothicNeo1SemiBold.otf',
+       'fonts/SandollGothicNeo1-Semibold.otf'],
+  700:['fonts/SandollGothicNeo1-Bold.otf','fonts/SandollGothicNeo1Bold.otf']
+};
+const FALLBACK = "'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif";
+let FAMILY = FALLBACK;
+
+async function loadFonts(){
+  const got = [];
+  for (const w of [300,400,500,600,700]){
+    const srcs = EMBEDDED[w] ? [EMBEDDED[w]] : (AUTO_PATHS[w] || []);
+    for (const s of srcs){
+      try {
+        const face = new FontFace(FAMILY_NAME, `url(${s})`, {weight:String(w)});
+        await face.load();
+        document.fonts.add(face);
+        got.push(w);
+        break;
+      } catch(e){ /* 다음 후보로 */ }
+    }
+  }
+  if (got.length){
+    FAMILY = `'${FAMILY_NAME}',${FALLBACK}`;
+    wcache.clear();
+  }
+  if (S.data) draw();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   디자인 토큰
+   ══════════════════════════════════════════════════════════════════ */
+const PT = 4/3, pt = v => Math.round(v*PT);
+
+/* 여백 — 배너 전체 상하좌우는 63px 로 통일하고,
+   누끼컷과 텍스트 사이 간격만 73px 로 별도 고정한다.
+   누끼컷이 작아 세로가 안 채워지면 그냥 남는 여백을 두고 수직 중앙 정렬한다. */
+const L = {
+  width:1200, pad:63, imgCol:320, gap:73,
+  imgExtraVpad:50,   // 세로로 긴 제품(튜브 등)이 캔버스를 늘려 여백을 좁히지 않도록
+  gapNameSection:26, gapHeaderBody:10, gapBodyHeader:28,
+  gapBodyFooter:24, gapFooterLines:4,
+  get textX(){ return this.pad + this.imgCol + this.gap },
+  get textW(){ return this.width - this.pad - this.textX }
+};
+
+/* 타이포그래피 — 전부 산돌고딕Neo. 고정값 */
+const T = {
+  name:   {size:pt(27), weight:700, lh:1.25,           tr:-0.020},  // bold
+  volume: {size:pt(21), weight:500, lh:1.25,           tr:-0.020},  // medium
+  section:{size:pt(21), weight:600, lh:1.30,           tr:-0.020},  // semibold
+  body:   {size:pt(18), weight:300, lh:pt(25)/pt(18),  tr:-0.020},  // light, 행간 25pt
+  bodyB:  {size:pt(18), weight:600, lh:pt(25)/pt(18),  tr:-0.020},  // semibold(강조)
+  footer: {size:pt(15), weight:300, lh:pt(23)/pt(15), tr:-0.010},  // light, 행간 23pt
+  footerB:{size:pt(15), weight:500, lh:pt(23)/pt(15), tr:-0.010}   // medium(강조)
+};
+const LUM_T = 0.45;
+const ON_DARK  = {body:'#FFFFFF', sub:'#F2F6EA'};
+const ON_LIGHT = {body:'#1A1A1A', sub:'#4A4A4A'};
+
+/* 제품 라인 — 13개. 제품명에 라인 이름이 들어 있으면 자동으로 배경색을 맞춘다.
+   공백 유무와 대소문자에 관계없이 매칭되도록 정규화해서 비교한다. */
+const LINES = [
+  {id:'nokdu',            label:'녹두',                 hex:'#749a33'},
+  {id:'cicaterol',        label:'시카테롤',              hex:'#d6f1e2'},
+  {id:'multi_hyaluronic', label:'멀티 히알루론산',        hex:'#4452a3'},
+  {id:'cicapul',          label:'시카풀',                hex:'#b0ebab'},
+  {id:'pat',              label:'팥',                   hex:'#fce8e7'},
+  {id:'b5',               label:'비5',                  hex:'#003aa5'},
+  {id:'madecassoside',    label:'마데카소사이드',         hex:'#136d37'},
+  {id:'lemon_seed',       label:'레몬씨',                hex:'#ffeb50'},
+  {id:'milk_ceramide',    label:'밀크 세라마이드',        hex:'#bebebe'},
+  {id:'aqua_hyaluronic',  label:'아쿠아 퓨어 히알루로닉', hex:'#abebfb'},
+  {id:'sun_moisture',     label:'선뮤즈 모이스처',        hex:'#d4f7ff'},
+  {id:'cica_pdrn',        label:'시카 피디알엔',         hex:'#e2e6ee'},
+  {id:'sun_mineral',      label:'선뮤즈 무기자차',        hex:'#85e35f'},
+  {id:'pink_salt',        label:'핑크솔트',              hex:'#ffd3ec'},
+  {id:'mugwort',          label:'쑥',                   hex:'#f1ffc3'},
+
+  /* 아래 4개는 제품명에 '톤업'이 공통으로 들어가 부분 문자열로는 서로
+     구분되지 않는다 (예: '...선크림 마일드 그린' 안에도 '선뮤즈 톤업'이
+     프리픽스로 포함됨). 그래서 자동 인식은 부분 매칭이 아니라 등록된
+     정확한 제품명과의 완전 일치로만 판단한다. */
+  {id:'sun_toneup', label:'선뮤즈 톤업',      hex:'#e3dfff', exact:true, names:[
+    '비플레인 선뮤즈 톤업 앤 코렉팅 선크림', '비플레인 선뮤즈 톤업 앤 코렉팅 매트 선크림']},
+  {id:'sun_green',  label:'선뮤즈 마일드그린', hex:'#84f1bd', exact:true, names:[
+    '비플레인 선뮤즈 톤업 앤 코렉팅 선크림 마일드 그린']},
+  {id:'sun_pink',   label:'선뮤즈 피치핑크',  hex:'#fdafaf', exact:true, names:[
+    '비플레인 선뮤즈 톤업 앤 코렉팅 선크림 피치핑크']},
+  {id:'sun_beige',  label:'선뮤즈 스킨 베이지', hex:'#fbf2e0', exact:true, names:[
+    '비플레인 선뮤즈 톤업 앤 코렉팅 선크림 스킨 베이지']}
+];
+const normKey = s => String(s||'').replace(/\s+/g,'').toLowerCase();
+/* 부분 매칭 후보에서는 exact 라인(위 4개)을 제외해 충돌 소지를 원천 차단한다 */
+const LINES_BY_LEN = LINES.filter(l=>!l.exact).sort((a,b)=>b.label.length-a.label.length);
+function matchLine(productName){
+  const key = normKey(productName);
+  if (!key) return null;
+  // 1) 정확한 제품명 완전 일치 (ID 기반) — 이름이 겹치는 선뮤즈 계열용
+  const exact = LINES.find(l => l.exact && l.names.some(n => normKey(n) === key));
+  if (exact) return exact;
+  // 2) 나머지는 기존처럼 라인 이름 부분 포함 여부로 판단
+  return LINES_BY_LEN.find(l => key.includes(normKey(l.label))) || null;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   색
+   ══════════════════════════════════════════════════════════════════ */
+const hex2rgb = h => { h = h.replace('#','');
+  if (h.length===3) h = [...h].map(c=>c+c).join('');
+  return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16)); };
+const lum = rgb => { const f=c=>{c/=255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4};
+  const [r,g,b]=rgb.map(f); return .2126*r+.7152*g+.0722*b; };
+const contrast = (a,b) => { const x=lum(hex2rgb(a)), y=lum(hex2rgb(b));
+  return (Math.max(x,y)+.05)/(Math.min(x,y)+.05); };
+const autoText = bg => lum(hex2rgb(bg)) > LUM_T ? ON_LIGHT : ON_DARK;
+const textColors = (bg, mode) =>
+  mode === 'white' ? ON_DARK : mode === 'black' ? ON_LIGHT : autoText(bg);
+
+/* ══════════════════════════════════════════════════════════════════
+   텍스트 엔진 — 글자 단위 advance 로 자간·줄바꿈을 동일 기준으로 처리
+   ══════════════════════════════════════════════════════════════════ */
+const mctx = document.createElement('canvas').getContext('2d');
+const wcache = new Map();
+const fontStr = s => `${s.weight} ${s.size}px ${FAMILY}`;
+const leading = s => Math.round(s.size * s.lh);
+
+function advance(ch, st){
+  const key = st.weight+'|'+st.size+'|'+FAMILY+'|'+ch;
+  let w = wcache.get(key);
+  if (w === undefined){ mctx.font = fontStr(st); w = mctx.measureText(ch).width; wcache.set(key,w); }
+  return w + st.size*st.tr;
+}
+const measure = (t, st) => [...t].reduce((a,c)=>a+advance(c,st), 0);
+function metrics(st){
+  mctx.font = fontStr(st);
+  const m = mctx.measureText('한Hg');
+  return {asc:m.fontBoundingBoxAscent||st.size*.88, desc:m.fontBoundingBoxDescent||st.size*.22};
+}
+
+const NO_START = new Set([...')%,.;:!?]}」』’”·…~/']);
+const NO_END   = new Set([...'([{「『‘“']);
+const LATIN    = /[A-Za-z0-9]/;
+
+function runs(text, base, strong, color, strongColor){
+  const out=[], re=/\*\*(.+?)\*\*/gs; let i=0, m;
+  while ((m = re.exec(text))){
+    if (m.index>i) out.push({text:text.slice(i,m.index), st:base, color});
+    out.push({text:m[1], st:strong, color:strongColor||color});
+    i = re.lastIndex;
+  }
+  if (i<text.length) out.push({text:text.slice(i), st:base, color});
+  return out.length ? out : [{text:'', st:base, color}];
+}
+
+function tokenize(rs){
+  const atoms=[];
+  rs.forEach((run,ri)=>{
+    let buf='';
+    const flush=()=>{ if(buf){ atoms.push({ri,text:buf,w:measure(buf,run.st)}); buf=''; } };
+    for (const ch of run.text){
+      if (ch==='\n'){ flush(); atoms.push({ri,text:'\n',w:0,br:true}); continue; }
+      if (ch===' '){ flush(); atoms.push({ri,text:' ',w:advance(' ',run.st),sp:true}); continue; }
+      if (LATIN.test(ch) || ('-.,/'.includes(ch) && buf && LATIN.test(buf.at(-1)))){ buf+=ch; continue; }
+      flush();
+      const prev = atoms.at(-1);
+      if (NO_START.has(ch) && prev && !prev.sp && !prev.br){
+        prev.text += ch; prev.w += advance(ch, run.st);
+      } else atoms.push({ri, text:ch, w:advance(ch, run.st)});
+    }
+    flush();
+  });
+  return atoms;
+}
+
+function wrap(rs, maxW){
+  const atoms = tokenize(rs), lines = [];
+  let cur=[], curW=0;
+  const pack = as => {
+    // 세그먼트를 원자 단위로 그대로 유지 (병합하지 않음) — 양쪽 정렬 시
+    // 글자 하나하나 사이 간격에 고르게 나눠 붙이기 위해 경계를 보존한다.
+    const segs = as.map(a => ({text:a.text, ri:a.ri}));
+    const width = as.reduce((s,a)=>s+a.w, 0);
+    const sts = as.length ? as.map(a=>rs[a.ri].st) : [rs[0].st];
+    const tall = sts.reduce((p,c)=>leading(c)>leading(p)?c:p);
+    const {asc,desc} = metrics(tall), h = leading(tall);
+    const gapCount = Math.max(0, as.length - 1);
+    return {segs, h, base:(h-(asc+desc))/2 + asc, width, gapCount};
+  };
+  const commit = hard => {
+    while (cur.length && cur.at(-1).sp) cur.pop();
+    if (cur.length || !lines.length){ const ln = pack(cur); ln.hardEnd = !!hard; lines.push(ln); }
+    cur=[]; curW=0;
+  };
+  for (const a of atoms){
+    if (a.br){ commit(true); continue; }
+    if (a.sp && !cur.length) continue;
+    if (curW + a.w > maxW && cur.length){
+      let carry=null;
+      if (NO_END.has(cur.at(-1).text.at(-1)) && cur.length>1) carry = cur.pop();
+      commit();
+      if (carry){ cur.push(carry); curW += carry.w; }
+      if (a.sp) continue;
+    }
+    cur.push(a); curW += a.w;
+  }
+  commit(true);
+
+  /* 양쪽 정렬 — 스페이스 몇 개에만 몰아서 늘리면 문장마다 자간이 들쭉날쭉해
+     보이므로, 줄 안의 모든 글자 사이 간격(gap)에 아주 조금씩 고르게
+     나눠 붙인다. 문단의 마지막 줄과 명시적 줄바꿈으로 끝난 줄은 제외해
+     자연스러운 마무리를 유지한다. 라틴 단어·숫자·성분명은 하나의 원자라
+     내부에는 정렬 간격이 들어가지 않아 절대 끊기거나 벌어지지 않는다. */
+  lines.forEach((ln, i) => {
+    const isParaEnd = ln.hardEnd || i === lines.length - 1;
+    const extra = maxW - ln.width;
+    ln.justifyExtra = (!isParaEnd && extra > 0 && ln.gapCount > 0) ? extra / ln.gapCount : 0;
+  });
+  return lines;
+}
+const parHeight = ls => ls.reduce((a,l)=>a+l.h, 0);
+
+function drawPara(ctx, x, y, lines, rs){
+  ctx.textBaseline = 'alphabetic';
+  for (const line of lines){
+    const by = y + line.base;
+    let cx = x;
+    const n = line.segs.length;
+    line.segs.forEach((seg, i) => {
+      const run = rs[seg.ri];
+      ctx.font = fontStr(run.st); ctx.fillStyle = run.color;
+      for (const ch of seg.text){
+        ctx.fillText(ch, cx, by);
+        cx += advance(ch, run.st);
+      }
+      if (i < n-1 && line.justifyExtra) cx += line.justifyExtra;
+    });
+    y += line.h;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   본문 조립 · 렌더
+   ══════════════════════════════════════════════════════════════════ */
+const norm = s => String(s ?? '').replace(/\s+/g,' ').trim();
+const joinUsage = a => {
+  a = (a||[]).filter(t=>norm(t));
+  if (a.length <= 1) return norm(a[0]||'');   // 원문에 번호가 없던 경우 — 번호를 새로 붙이지 않음
+  return a.map((t,i)=>`${i+1}. ${norm(t)}`).join(' ');
+};
+const joinIngr  = a => (a||[]).map(norm).filter(Boolean).join(', ');
+
+function joinCaution(c){
+  c = c||{};
+  const subs = c.sub_items||{};
+  const parts = [];   // 소제목이 이미 '사용 시의 주의사항'이라 선두 문구는 생략
+  (c.items||[]).forEach((it,i)=>{
+    const n = i+1;
+    parts.push(`${n}. ${norm(it)}`);
+    (subs[n]||subs[String(n)]||[]).forEach((s,j)=>
+      parts.push(`${'가나다라마바사'[j]||'기'}) ${norm(s)}`));
+  });
+  return parts.join(' ');
+}
+function joinFooter(f){
+  f = f||{};
+  const parts = [];
+  if (f.cs_phone) parts.push(`**소비자 상담실 ${norm(f.cs_phone)}** 본 상품에 이상이 있을 경우 `+
+    `공정거래위원회 고시 '소비자 분쟁 해결 기준'에 의해 보상해드립니다.`);
+  if (f.seller) parts.push(`**화장품책임판매업자** ${norm(f.seller)}`);
+  if (f.manufacturers && f.manufacturers.length){
+    const body = f.manufacturers.filter(m=>norm(m.text))
+      .map(m=>`${norm(m.label)} ${norm(m.text)}`.trim()).join(' ');
+    if (body) parts.push(`**화장품제조업자** ${body}`);
+  } else if (f.manufacturer) {
+    parts.push(`**화장품제조업자** ${norm(f.manufacturer)}`);
+  }
+  // 항목들을 강제로 줄바꿈하지 않고 한 문단으로 이어 붙인다 —
+  // 자연스럽게 흐르다가 폭이 넘칠 때만 줄바꿈되고, 양쪽 정렬이 적용된다.
+  const out = parts.length ? [parts.join(' ')] : [];
+  (f.extra||[]).forEach(e=>out.push(norm(e)));
+  return out;
+}
+
+/* 세트 제목: '{브랜드} {제품A} {용량1} + {용량2} + {제품B} {용량3} 세트' */
+function composeSetTitle(brand, components){
+  let prevName = null;
+  const segs = [];
+  components.forEach((c,i) => {
+    const name = norm(c.name), volume = norm(c.volume);
+    const label = i===0 ? `${brand} ${name}`.trim() : name;
+    if (name !== prevName){ segs.push(`${label} ${volume}`.trim()); prevName = name; }
+    else segs.push(volume);
+  });
+  return segs.join(' + ') + ' 세트';
+}
+/* 세트 구성 문구: '{제품A} {용량1} + {용량2} [증정] + {제품B} {용량3} [증정]' */
+function composeSetSubtitle(components){
+  let prevName = null;
+  const segs = components.map(c => {
+    const name = norm(c.name), volume = norm(c.volume), tag = (c.tag||'').trim();
+    const prefix = name !== prevName ? name+' ' : '';
+    prevName = name;
+    return prefix + volume + (tag ? ` [${tag}]` : '');
+  });
+  return segs.join(' + ');
+}
+
+function buildBlocks(d, bodyC, subC){
+  const W = L.textW, blocks = [];
+  const push = (mk, base, strong, color, gap) => {
+    const rs = runs(mk, base, strong, color), ls = wrap(rs, W);
+    blocks.push({kind:'p', h:parHeight(ls), rs, ls, gap:gap||0});
+  };
+
+  if (d.mode === 'set'){
+    // 1) 세트 제목 — 여러 줄로 자연스럽게 감싸지도록(단품처럼 한 줄
+    //    강제 축소하지 않음), 제품명 스타일 그대로 사용
+    const title = composeSetTitle(norm(d.brand), d.components||[]);
+    push(title, T.name, T.name, bodyC, L.gapHeaderBody);
+    // 2) 구성 문구 — 소제목 스타일로 한 단 더
+    const subtitle = composeSetSubtitle(d.components||[]);
+    push(subtitle, T.section, T.section, bodyC, L.gapNameSection);
+  } else {
+    /* 제품명 + 용량 — 한 줄에 맞도록 최대 22% 자동 축소 */
+    const name = norm(d.product_name), vol = norm(d.volume);
+    let ns = {...T.name}, vs = {...T.volume};
+    const floor = Math.round(T.name.size*0.78);
+    while (ns.size > floor && measure(name,ns) + (vol?measure(' '+vol,vs):0) > W){
+      ns = {...ns, size:ns.size-1}; vs = {...vs, size:Math.max(1,vs.size-1)};
+    }
+    const nr = [{text:name, st:ns, color:bodyC}];
+    if (vol) nr.push({text:' '+vol, st:vs, color:bodyC});
+    const nl = wrap(nr, W);
+    blocks.push({kind:'p', h:parHeight(nl), rs:nr, ls:nl, gap:L.gapNameSection});
+  }
+
+  const secs = [
+    ['사용법', joinUsage(d.usage)],
+    ['전성분', joinIngr(d.ingredients)],
+    ['사용 시의 주의사항', joinCaution(d.caution)]
+  ].filter(s=>s[1]);
+  secs.forEach(([title,text],i)=>{
+    push(title, T.section, T.section, bodyC, L.gapHeaderBody);
+    const last = i === secs.length-1;
+    push(text, T.body, T.bodyB, bodyC, last ? L.gapBodyFooter : L.gapBodyHeader);
+  });
+
+  const fl = joinFooter(d.footer);
+  if (fl.length){
+    fl.forEach((t,i)=>push(t, T.footer, T.footerB, subC, i===fl.length-1?0:L.gapFooterLines));
+  }
+  return blocks;
+}
+
+function renderBanner(canvas, d, cutouts, bgHex, mode, scale){
+  scale = scale||1;
+  const {body:bodyC, sub:subC} = textColors(bgHex, mode);
+  const blocks = buildBlocks(d, bodyC, subC);
+  const textH = blocks.reduce((a,b)=>a+b.h+b.gap,0) - (blocks.length?blocks.at(-1).gap:0);
+
+  /* 누끼컷 배치 — 단품은 1장, 세트는 여러 장을 컬럼 폭 안에 나란히 배치.
+     폭 기준으로 먼저 맞춘 뒤, 가장 큰 것이 예산 높이를 넘으면 전체를
+     같은 비율로 함께 줄여 서로의 크기 관계는 그대로 유지한다. */
+  const imgs = (Array.isArray(cutouts) ? cutouts : (cutouts ? [cutouts] : [])).filter(Boolean);
+  const budgetH = textH - L.imgExtraVpad*2;
+  const placed = [];
+  let groupH = 0;
+  if (imgs.length){
+    const n = imgs.length, gutter = 16;
+    const slotW = Math.max(1, Math.floor((L.imgCol - gutter*(n-1)) / n));
+    let raw = imgs.map(im => {
+      const r = slotW / im.width;
+      return {im, w:slotW, h:Math.max(1, Math.round(im.height*r))};
+    });
+    let tallest = Math.max(...raw.map(r=>r.h));
+    if (budgetH > 0 && tallest > budgetH){
+      const shrink = budgetH / tallest;
+      raw = raw.map(r => ({im:r.im, w:Math.max(1,Math.round(r.w*shrink)), h:Math.max(1,Math.round(r.h*shrink))}));
+      tallest = Math.max(...raw.map(r=>r.h));
+    }
+    groupH = tallest;
+    let cx = L.pad;
+    raw.forEach(r => {
+      placed.push({im:r.im, x:cx + Math.round((slotW-r.w)/2), w:r.w, h:r.h});
+      cx += slotW + gutter;
+    });
+  }
+  const H = Math.max(textH + L.pad*2, groupH + (L.pad+L.imgExtraVpad)*2);
+
+  canvas.width = L.width*scale; canvas.height = H*scale;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(scale,0,0,scale,0,0);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.fillStyle = bgHex; ctx.fillRect(0,0,L.width,H);
+  if (placed.length){
+    const groupTop = Math.round((H-groupH)/2);
+    placed.forEach(p => {
+      const iy = groupTop + (groupH - p.h);   // 바닥선을 맞춰 하단 정렬
+      ctx.drawImage(p.im, p.x, iy, p.w, p.h);
+    });
+  }
+
+  const free = H - L.pad*2 - textH;
+  let y = L.pad + (free>0 ? Math.floor(free/2) : 0);
+  const x = L.textX;
+  for (const b of blocks){
+    drawPara(ctx, x, y, b.ls, b.rs);
+    y += b.h + b.gap;
+  }
+  return H;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   배경 제거 — 테두리 편차로 허용오차를 자동 산정
+   ══════════════════════════════════════════════════════════════════ */
+function keyOut(img){
+  const c = document.createElement('canvas');
+  c.width = img.width; c.height = img.height;
+  const ctx = c.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(img,0,0);
+  const id = ctx.getImageData(0,0,c.width,c.height), px = id.data;
+  const w = c.width, h = c.height, n = w*h;
+
+  const corners = [0,(w-1)*4,(n-w)*4,(n-1)*4];
+  const bg = [0,1,2].map(k=>Math.round(corners.reduce((a,o)=>a+px[o+k],0)/4));
+  const dev = i => { const o=i*4;
+    return Math.abs(px[o]-bg[0])+Math.abs(px[o+1]-bg[1])+Math.abs(px[o+2]-bg[2]); };
+
+  /* 단색 스튜디오 배경은 좁게, 그라데이션 배경은 넓게 잡힌다 */
+  let sum=0, cnt=0;
+  for (let x=0;x<w;x+=2){ sum+=dev(x)+dev((h-1)*w+x); cnt+=2; }
+  for (let y=0;y<h;y+=2){ sum+=dev(y*w)+dev(y*w+w-1); cnt+=2; }
+  const TOL = Math.min(120, Math.max(24, (sum/cnt)*1.8 + 24));
+
+  const seen = new Uint8Array(n), q = new Int32Array(n);
+  let head=0, tail=0;
+  const seed = i => { if (!seen[i] && dev(i) < TOL){ seen[i]=1; q[tail++]=i; } };
+  for (let x=0;x<w;x++){ seed(x); seed((h-1)*w+x); }
+  for (let y=0;y<h;y++){ seed(y*w); seed(y*w+w-1); }
+  while (head<tail){
+    const i=q[head++], x=i%w, y=(i/w)|0;
+    if (x>0) seed(i-1); if (x<w-1) seed(i+1);
+    if (y>0) seed(i-w); if (y<h-1) seed(i+w);
+  }
+  for (let i=0;i<n;i++) if (seen[i]) px[i*4+3]=0;
+  ctx.putImageData(id,0,0);
+  return trim(c);
+}
+function trim(c){
+  const ctx = c.getContext('2d',{willReadFrequently:true});
+  const {data:d} = ctx.getImageData(0,0,c.width,c.height);
+  let x0=c.width, y0=c.height, x1=-1, y1=-1;
+  for (let y=0;y<c.height;y++) for (let x=0;x<c.width;x++)
+    if (d[(y*c.width+x)*4+3] > 8){
+      if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+    }
+  if (x1<0) return c;
+  const o = document.createElement('canvas');
+  o.width = x1-x0+1; o.height = y1-y0+1;
+  o.getContext('2d').drawImage(c,x0,y0,o.width,o.height,0,0,o.width,o.height);
+  return o;
+}
+
+
+
+/* ══════════════════════════════════════════════════════════════════
+   로컬 파서 — API 없이 브라우저에서 바로 분석
+   ══════════════════════════════════════════════════════════════════ */
+const ANCHORS = [
+  ['usage',  /사용\s*법|사용\s*방법/],
+  ['ingr',   /전\s*성\s*분/],
+  ['caution',/사용할\s*때의?\s*주의\s*사항|사용\s*시의?\s*주의\s*사항/],
+  ['tel',    /소비자\s*상담실|고객\s*상담실/],
+  ['sell',   /화장품\s*책임\s*판매\s*업자/],
+  ['make',   /화장품\s*제조\s*업자|제조원/]
+];
+
+/* 한글은 단어 중간에서도 줄이 바뀌므로 기본은 붙여 쓴다.
+   앞줄이 조사·어미로 끝나거나 뒷줄이 독립 어절로 시작할 때만 공백을 넣는다. */
+const SPACE_AFTER  = /[을를이가은는에의와과도만로서게며야고지다것요음함임및등후시전면구군읍동층개년월일]$/;
+const SPACE_BEFORE = /^(또는|및|등|그리고|이상|경우|때|후|전|내|외|중|또한|혹은|피부|사용)/;
+const JOSA_START   = /^(와|과|은|는|이|가|을|를|에|의|로|도|만|께)(\s|$)/;
+const MARKER       = /^(\d{1,2}[.)]|[가-힣]\)|[•·●-]\s)/;
+
+function unwrap(block, glue){
+  return block.split('\n').map(l=>l.trim()).filter(Boolean).reduce((acc,l)=>{
+    if (!acc) return l;
+    if (MARKER.test(l)) return acc + ' ' + l;
+    if (!(/[가-힣]$/.test(acc) && /^[가-힣]/.test(l))) return acc + ' ' + l;
+    if (glue === 'tight' || JOSA_START.test(l)) return acc + l;
+    return (SPACE_AFTER.test(acc) || SPACE_BEFORE.test(l)) ? acc + ' ' + l : acc + l;
+  }, '');
+}
+
+function sliceSections(raw){
+  const text = raw.replace(/\r/g,'').replace(/[ \t]+/g,' ');
+  const marks = [];
+  for (const [key, re] of ANCHORS){
+    const m = re.exec(text);
+    if (m) marks.push({key, s:m.index, e:m.index + m[0].length});
+  }
+  marks.sort((a,b)=>a.s-b.s);
+  const out = {head: marks.length ? text.slice(0, marks[0].s) : text};
+  marks.forEach((mk,i)=>{
+    out[mk.key] = text.slice(mk.e, i+1<marks.length ? marks[i+1].s : text.length).trim();
+  });
+  return out;
+}
+
+const VOL_RE = /((?:\d+\s*(?:pads?|sheets?|매|ea|정)\s*\/\s*)?\d+(?:\.\d+)?\s?(?:ml|mL|ML|g|kg|매|ea|정|pads?|sheets?))\s*$/;
+function formatVolume(raw){
+  const s = raw.trim().replace(/\s+/g,' ');
+  // 슬래시로 이어진 복합 단위(예: '70 pads / 130 ml')만 앞뒤 공백을 정리하고,
+  // 그 외에는 원문에 있던 숫자-단위 사이 공백(또는 공백 없음)을 그대로 둔다
+  // — '150ml'은 붙여서, '5 sheets'는 띄어서 나온 원문 표기를 그대로 살린다.
+  return s.includes('/') ? s.replace(/\s*\/\s*/,' / ') : s;
+}
+function parseHead(head){
+  const line = head.split('\n').map(s=>s.trim()).filter(Boolean)[0] || '';
+  const m = VOL_RE.exec(line);
+  return m ? {product_name:norm(line.slice(0,m.index)), volume:formatVolume(m[1])}
+           : {product_name:norm(line), volume:''};
+}
+function numberedItems(t){
+  const parts = t.split(/(?:^|\s)(\d{1,2})[.)]\s*/).filter(Boolean), out = [];
+  for (let i=0;i<parts.length;i++)
+    if (/^\d{1,2}$/.test(parts[i]) && parts[i+1]) out.push({n:parts[i], body:parts[++i]});
+  return out;
+}
+function parseUsageLocal(block){
+  const t = unwrap(block);
+  const n = numberedItems(t);
+  // 원문에 번호가 없으면 문장 단위로 쪼개지 않고 통째로 하나의 문단으로 둔다
+  // (여러 개로 쪼개면 joinUsage 가 없던 번호를 새로 붙이게 되므로)
+  return n.length ? n.map(x=>norm(x.body)) : [norm(t)];
+}
+function parseIngrLocal(block){
+  return unwrap(block,'tight').replace(/(\d),(\d)/g,'$1\u0000$2').split(',')
+    .map(s=>s.replace(/\u0000/g,',').trim().replace(/^[·•]\s*/,'').replace(/\.$/,''))
+    .filter(s=>s && s.length<60);
+}
+function parseCautionLocal(block){
+  const t = unwrap(block)
+    .replace(/^\s*(사용할\s*때의?\s*주의\s*사항|사용\s*시의?\s*주의\s*사항)\s*/,'');
+  const items = [], sub = {};
+  for (const {n, body} of numberedItems(t)){
+    const sp = body.split(/(?:^|\s)([가-힣])\)\s*/).filter(Boolean);
+    items.push(norm(sp[0]));
+    for (let j=1;j<sp.length;j++)
+      if (/^[가-힣]$/.test(sp[j]) && sp[j+1]) (sub[n] = sub[n]||[]).push(norm(sp[++j]));
+  }
+  return {items, sub_items:sub};
+}
+const cleanField = s => norm(s).replace(/^[:：]\s*/,'').replace(/[.,]$/,'');
+
+function parseLocal(raw){
+  const s = sliceSections(raw);
+  const tel = (s.tel||'').match(/(\d{2,4}-\d{3,4}(?:-\d{4})?)/);
+  return {
+    ...parseHead(s.head||''),
+    usage: parseUsageLocal(s.usage||''),
+    ingredients: parseIngrLocal(s.ingr||''),
+    caution: parseCautionLocal(s.caution||''),
+    footer:{cs_phone: tel?tel[1]:'', seller: cleanField(unwrap(s.sell||'')),
+            manufacturer: cleanField(unwrap(s.make||''))}
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   검증 · 샘플
+   ══════════════════════════════════════════════════════════════════ */
+const REQ_KW = ['전문의','상처','어린이','직사광선'];
+function validate(d){
+  const errs=[], warns=[];
+  if (d.mode !== 'set' && !norm(d.product_name)) errs.push('제품명이 비어 있습니다.');
+  if (!(d.ingredients||[]).length) errs.push('전성분이 비어 있습니다.');
+  const f = d.footer||{};
+  if (!norm(f.seller)) errs.push('화장품책임판매업자가 비어 있습니다.');
+  const hasMfg = f.manufacturers && f.manufacturers.some(m=>norm(m.text));
+  if (!norm(f.manufacturer) && !hasMfg) errs.push('화장품제조업자가 비어 있습니다.');
+  const miss = REQ_KW.filter(k=>!joinCaution(d.caution).includes(k));
+  if (miss.length) warns.push('주의사항 권고 문구 누락 가능: ' + miss.join(', '));
+  return {errs, warns};
+}
+
+/* 용량은 무조건 입력해야 배너가 완성된다 — 단품은 용량 한 칸,
+   세트는 구성품마다 각각 확인한다. */
+function missingVolumes(d){
+  if (d.mode === 'set')
+    return (d.components||[]).filter(c => !norm(c.volume))
+      .map(c => norm(c.name) || '이름 없는 구성품');
+  return norm(d.volume) ? [] : ['용량'];
+}
+
+/* 실제 패키지 뒷면 원문 그대로. parseLocal() 로 100% 원문과 일치하게 파싱됨을 검증함 */
+const SAMPLE_RAW = `비플레인 녹두 약산성 클렌징폼 80ml
+사용법
+세안시 적당량을 손에 덜어 물과 함께 거품을 내 피부를 부드럽게 마사지해주고, 미온수로 깨끗하게 씻어냅니다.
+전성분
+글리세린, 정제수, 소듐코코일글라이시네이트, 소듐라우로일글루타메이트, 1,2-헥산다이올, 하이드록시프로필스타치포스페이트, 부틸렌글라이콜, 녹두가루(9,000ppm), 라우릴베타인, 하이드록시아세토페논, 녹두추출물(3,300ppm), 에틸헥실글리세린, 소듐클로라이드, 에탄올, 베타인, 폴리쿼터늄-39, 인도멀구슬나무잎추출물, 인도멀구슬나무꽃추출물, 덱스트린, 카카오씨추출물, 아이비고드열매추출물, 알란토인, 황벽나무껍질추출물, 알로에베라꽃추출물, 가지열매추출물, 소듐벤조에이트, 홀리바질잎추출물, 참산호말추출물, 울금뿌리추출물, 캐모마일꽃추출물, 토코페롤, 하이드로제네이티드레시틴, 병풀추출물, 무화과추출물, 세라마이드엔피, 소듐하이알루로네이트, 녹차가루
+사용 시의 주의사항
+1. 화장품 사용 시 또는 사용 후 직사광선에 의하여 사용부위가 붉은 반점, 부어오름 또는 가려움증 등의 이상 증상이나 부작용이 있는 경우에는 전문의 등과 상담할 것 2. 상처가 있는 부위 등에는 사용을 자제할 것 3. 보관 및 취급 시 주의사항 가) 어린이의 손이 닿지 않는 곳에 보관할 것 나) 직사광선을 피해서 보관할 것 4. 눈 주위를 피하여 사용할 것 5. 알갱이가 눈에 들어갔을 때에는 물로 씻어내고, 이상이 있는 경우에는 전문의와 상담할 것
+소비자 상담실 1644-3228 본 상품에 이상이 있을 경우 공정거래위원회 고시 소비자 분쟁 해결 기준에 의해 보상해드립니다.
+화장품책임판매업자 ㈜모먼츠컴퍼니 서울특별시 성동구 아차산로 5길 24-11, 5F
+화장품제조업자 한국콜마㈜ 세종특별자치시 전의면 산단길 22-17`;
+
+/* 세트 모드 샘플 — 대표 구성품(세럼 30ml)의 뒷면 원문 */
+const SAMPLE_SET_RAW = `녹두 모공 타이트업 세럼 30ml
+사용법
+토너로 피부 결을 정돈한 후 아침, 저녁 1일 2회 적당량을 취해 피부에 골고루 펴 바릅니다.
+전성분
+정제수, 글리세린, 다이프로필렌글라이콜, 나이아신아마이드, 자일리톨, 1,2-헥산다이올, 부틸렌글라이콜, 하이드록시아세토페논, 아크릴레이트/C10-30알킬아크릴레이트크로스폴리머, 녹두추출물(2,000ppm), 트로메타민, 에틸헥실글리세린, 하이드롤라이즈드치자추출물, 하이드롤라이즈드맥아추출물, 하이드롤라이즈드삼색제비꽃추출물, 멘톡시프로판다이올, 아데노신, 트라이소듐에틸렌다이아민다이석시네이트, 펜틸렌글라이콜, 글리세릴글루코사이드, 석류나무꽃추출물, 덱스트린, 하이알루로닉애씨드, 치자추출물, 녹두씨추출물(5ppm), 얼룩파인애플추출물, 사과추출물, 복숭아추출물, 로우스위트블루베리추출물, 글라이코젠, 아세틸헥사펩타이드-8
+사용 시의 주의사항
+1. 화장품 사용 시 또는 사용 후 직사광선에 의하여 사용부위가 붉은 반점, 부어오름 또는 가려움증 등의 이상 증상이나 부작용이 있는 경우에는 전문의 등과 상담할 것 2. 상처가 있는 부위 등에는 사용을 자제할 것 3. 보관 및 취급 시 주의사항 가) 어린이의 손이 닿지 않는 곳에 보관할 것 나) 직사광선을 피해서 보관할 것
+소비자 상담실 1644-3228 본 상품에 이상이 있을 경우 공정거래위원회 고시 소비자 분쟁 해결 기준에 의해 보상해드립니다.
+화장품책임판매업자 ㈜모먼츠컴퍼니 서울특별시 성동구 아차산로 5길 24-11, 5F
+화장품제조업자 ㈜코스메카코리아 충청북도 음성군 대소면 대금로196번길 17-12`;
+
+/* ══════════════════════════════════════════════════════════════════
+   UI
+   ══════════════════════════════════════════════════════════════════ */
+const S = {rawCut:null, cutout:null, data:null,
+           color:'#749a33', textMode:'auto', scale:1, busy:false,
+           mode:'single',        // 'single' | 'set'
+           components:[],        // 세트 모드: [{name,volume,tag,rawCut,cutout,doKey}]
+           manufacturers:[]};    // 세트 모드: [{label,text}]
+
+function currentCutouts(){
+  return S.mode === 'set' ? S.components.map(c=>c.cutout).filter(Boolean) : S.cutout;
+}
+
+const readImage = f => new Promise((ok,no)=>{
+  const r = new FileReader();
+  r.onload = () => { const i = new Image(); i.onload=()=>ok(i); i.onerror=no; i.src=r.result; };
+  r.onerror = no; r.readAsDataURL(f);
+});
+
+function dropzone(zone, input, onFiles, multi){
+  zone.onclick = () => input.click();
+  zone.onkeydown = e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); input.click(); } };
+  input.onchange = () => { if (input.files.length) onFiles([...input.files]); };
+  ['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{
+    e.preventDefault(); zone.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{
+    e.preventDefault(); zone.classList.remove('over'); }));
+  zone.addEventListener('drop', e=>{
+    const f = [...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'));
+    if (f.length) onFiles(multi ? f : [f[0]]);
+  });
+}
+function fillDrop(zone, src, title, sub){
+  zone.classList.add('has');
+  zone.innerHTML = `<div class="thumb"><img alt=""></div>
+    <div class="meta"><b></b><span></span></div>`;
+  zone.querySelector('img').src = src;
+  zone.querySelector('b').textContent = title;
+  zone.querySelector('span').textContent = sub;
+}
+
+dropzone($('dropCut'), $('fileCut'), async files=>{
+  S.rawCut = await readImage(files[0]);
+  applyCutout();
+});
+function hasAlpha(img){
+  const c = document.createElement('canvas');
+  c.width = Math.min(img.width,200);
+  c.height = Math.max(1, Math.round(img.height*(c.width/img.width)));
+  const ctx = c.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(img,0,0,c.width,c.height);
+  const d = ctx.getImageData(0,0,c.width,c.height).data;
+  for (let i=3;i<d.length;i+=4) if (d[i]<250) return true;
+  return false;
+}
+function applyCutout(){
+  if (!S.rawCut) return;
+  // 투명 배경(PNG)이면 그대로 쓰고, 단색 배경 사진이면 자동으로 배경을 지운다
+  const removed = !hasAlpha(S.rawCut);
+  S.cutout = removed ? keyOut(S.rawCut) : S.rawCut;
+  const src = S.cutout.toDataURL ? S.cutout.toDataURL() : S.cutout.src;
+  fillDrop($('dropCut'), src, '제품 이미지',
+    `${S.cutout.width}×${S.cutout.height}px` + (removed?' · 배경 제거됨':''));
+  $('dropCut').after($('fileCut'));
+  syncTails(); draw();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   세트 모드 — 구성품(이미지+이름+용량+태그) 리스트
+   ══════════════════════════════════════════════════════════════════ */
+function newComponent(){
+  return {name:'', volume:'', tag:'', rawCut:null, cutout:null, doKey:false};
+}
+function renderComponents(){
+  const box = $('compList');
+  box.innerHTML = '';
+  S.components.forEach((c, i) => {
+    const row = document.createElement('div');
+    row.className = 'comp';
+    row.innerHTML = `
+      <div class="minidrop" tabindex="0" role="button" aria-label="구성품 ${i+1} 이미지 업로드">
+        ${c.cutout ? '<img alt="">' : '<span>이미지</span>'}
+      </div>
+      <input type="file" accept="image/*" class="hide">
+      <div class="fields">
+        <input type="text" class="name" placeholder="제품명 (예: 녹두 크림)" value="${c.name.replace(/"/g,'&quot;')}">
+        <div class="row2">
+          <input type="text" class="vol req" placeholder="용량 — 필수" value="${c.volume.replace(/"/g,'&quot;')}">
+          <input type="text" class="tag" placeholder="증정 (없으면 비워둠)" value="${c.tag.replace(/"/g,'&quot;')}">
+        </div>
+      </div>
+      <button class="rm" type="button" title="삭제" aria-label="구성품 삭제">✕</button>`;
+    const img = row.querySelector('.minidrop img');
+    if (img) img.src = c.cutout.toDataURL ? c.cutout.toDataURL() : c.cutout.src;
+
+    const minidrop = row.querySelector('.minidrop');
+    const fileIn = row.querySelector('input[type=file]');
+    minidrop.onclick = () => fileIn.click();
+    minidrop.onkeydown = e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fileIn.click(); } };
+    fileIn.onchange = async () => {
+      if (!fileIn.files.length) return;
+      c.rawCut = await readImage(fileIn.files[0]);
+      c.doKey = !hasAlpha(c.rawCut);
+      c.cutout = c.doKey ? keyOut(c.rawCut) : c.rawCut;
+      renderComponents(); draw();
+    };
+    row.querySelector('.name').oninput = e => { c.name = e.target.value; syncSetTail(); draw(); };
+    row.querySelector('.vol').oninput  = e => { c.volume = e.target.value; syncSetTail(); draw(); };
+    row.querySelector('.tag').oninput  = e => { c.tag = e.target.value; draw(); };
+    row.querySelector('.rm').onclick = () => {
+      if (S.components.length <= 1) return;
+      S.components.splice(i,1); renderComponents(); syncSetTail(); draw();
+    };
+    box.appendChild(row);
+  });
+}
+$('btnAddComp').onclick = () => {
+  if (S.components.length >= 8) return;
+  S.components.push(newComponent());
+  renderComponents();
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   세트 모드 — 화장품제조업자 리스트 (제조사가 여러 곳일 수 있음)
+   ══════════════════════════════════════════════════════════════════ */
+function renderMfg(){
+  const box = $('mfgList');
+  box.innerHTML = '';
+  S.manufacturers.forEach((m, i) => {
+    const row = document.createElement('div');
+    row.className = 'mfg';
+    row.innerHTML = `
+      <input type="text" class="mlabel" placeholder="제품명 (예: 비플레인 녹두 크림)" value="${(m.label||'').replace(/"/g,'&quot;')}">
+      <input type="text" class="mtext" placeholder="제조사 상호·주소" value="${(m.text||'').replace(/"/g,'&quot;')}">
+      <button class="rm" type="button" title="삭제" aria-label="제조업자 삭제">✕</button>`;
+    row.querySelector('.mlabel').oninput = e => { m.label = e.target.value; draw(); };
+    row.querySelector('.mtext').oninput  = e => { m.text  = e.target.value; draw(); };
+    row.querySelector('.rm').onclick = () => {
+      if (S.manufacturers.length <= 1) return;
+      S.manufacturers.splice(i,1); renderMfg(); draw();
+    };
+    box.appendChild(row);
+  });
+}
+$('btnAddMfg').onclick = () => {
+  if (S.manufacturers.length >= 6) return;
+  S.manufacturers.push({label:'', text:''});
+  renderMfg();
+};
+
+function syncSetTail(){
+  const n = S.components.filter(c=>norm(c.name)).length;
+  $('imgTail').textContent = S.mode==='set' ? `구성품 ${S.components.length}` : (S.cutout?'등록됨':'');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   모드 전환 — 단품 배너 / 세트 구성 배너
+   ══════════════════════════════════════════════════════════════════ */
+function setBannerMode(m){
+  S.mode = m;
+  const set = m === 'set';
+  $('modeSingle').setAttribute('aria-selected', String(!set));
+  $('modeSet').setAttribute('aria-selected', String(set));
+  $('imgSingle').classList.toggle('hide', set);
+  $('imgSet').classList.toggle('hide', !set);
+  $('imgHeading').textContent = set ? '구성품 이미지' : '제품 누끼컷';
+  $('mfgWrap').classList.toggle('hide', !set);
+  if (set && !S.components.length){
+    S.components.push(newComponent(), newComponent());
+    renderComponents();
+  }
+  if (set && !S.manufacturers.length){
+    S.manufacturers.push({label:'', text:''});
+    renderMfg();
+  }
+  syncSetTail();
+  S.data = null;
+  $('empty').classList.remove('hide');
+  $('preview').classList.add('hide');
+  $('btnSave').disabled = true;
+  flag('readFlag', null);
+}
+/* 세트 구성 배너 탭은 제거됨 — 단품 배너만 사용. setBannerMode('set')로
+   진입할 UI 경로가 없으므로 S.mode 는 항상 'single' 로 유지된다. */
+function applyResult(data, prefix){
+  S.data = data;
+  const got = `사용법 ${(data.usage||[]).length} · 전성분 ${(data.ingredients||[]).length} · `+
+              `주의사항 ${(data.caution.items||[]).length}`;
+
+  let matched;
+  if (S.mode === 'set'){
+    // 텍스트에서 읽은 제품명/용량은 대표 구성품 정보일 뿐 헤더에는 쓰지 않는다.
+    // 첫 번째 구성품이 비어 있으면 채워 넣고, 제조업자 첫 줄도 자동 채운다.
+    if (S.components.length && !norm(S.components[0].name)){
+      S.components[0].name = data.product_name || '';
+      S.components[0].volume = data.volume || '';
+      renderComponents();
+    }
+    if (S.manufacturers.length && !norm(S.manufacturers[0].text)){
+      S.manufacturers[0].label = norm(`${$('setBrand').value} ${data.product_name||''}`);
+      S.manufacturers[0].text = data.footer.manufacturer || '';
+      renderMfg();
+    }
+    const nameKey = norm(`${$('setBrand').value} ` + S.components.map(c=>c.name).join(' '));
+    matched = matchLine(nameKey || data.product_name);
+  } else {
+    matched = matchLine(data.product_name);
+  }
+  if (matched) setLine(matched, true);
+
+  flag('readFlag','k', `${prefix} — ${got}` +
+    (matched ? ` · 라인 자동 인식: ${matched.label}` : '') +
+    `. 미리보기에서 원문과 대조해 주세요.`);
+  draw();
+}
+
+$('setBrand').oninput = () => draw();
+$('btnClear').onclick = () => {
+  $('pasteText').value = '';
+  $('pasteText').focus();
+  S.data = null;
+  $('empty').classList.remove('hide');
+  $('preview').classList.add('hide');
+  $('btnSave').disabled = true;
+  flag('readFlag', null);
+};
+$('btnPasteRun').onclick = runLocalParse;
+function runLocalParse(){
+  const t = $('pasteText').value.trim();
+  if (!t) return;
+  try {
+    applyResult(parseLocal(t), '분석 완료');
+  } catch(e){
+    flag('readFlag','e','분석 실패: '+e.message+' — 형식을 확인해 주세요.');
+  }
+}
+
+/* ---- 제품 라인 ---- */
+const linesBox = $('lines');
+LINES.forEach(t=>{
+  const b = document.createElement('button');
+  b.className = 'lineopt'; b.type = 'button'; b.dataset.lineId = t.id;
+  b.setAttribute('aria-pressed','false');
+  b.title = t.hex;
+  b.innerHTML = `<span class="chip"></span><span class="nm"></span>`;
+  b.querySelector('.chip').style.background = t.hex;
+  b.querySelector('.nm').textContent = t.label;
+  b.onclick = () => setLine(t, false);
+  linesBox.appendChild(b);
+});
+
+function setLine(t, auto){
+  S.color = t.hex;
+  [...linesBox.children].forEach(b=>
+    b.setAttribute('aria-pressed', String(b.dataset.lineId === t.id)));
+  $('lineTail').textContent = t.label + (auto ? ' · 자동' : '');
+  draw();
+}
+function setMode(m){
+  S.textMode = m;
+  $('tAuto').setAttribute('aria-pressed', String(m==='auto'));
+  $('tWhite').setAttribute('aria-pressed', String(m==='white'));
+  $('tBlack').setAttribute('aria-pressed', String(m==='black'));
+  draw();
+}
+$('tAuto').onclick  = () => setMode('auto');
+$('tWhite').onclick = () => setMode('white');
+$('tBlack').onclick = () => setMode('black');
+
+/* ---- 내보내기 ---- */
+function setScale(s){
+  S.scale = s;
+  $('dims').textContent = dimsText();
+}
+$('btnSave').onclick = () => {
+  if (!S.data) return;
+  const d = buildRenderData();
+  const c = document.createElement('canvas');
+  renderBanner(c, d, currentCutouts(), S.color, S.textMode, S.scale);
+  // 파일명에는 브랜드명(예: '비플레인')을 빼고 제품명만 쓴다
+  const stripBrand = s => norm(s).replace(/^비플레인\s*/, '');
+  const nameSrc = d.mode==='set'
+    ? (norm($('setBrand').value)+'_'+S.components.map(x=>norm(x.name)).filter((v,i,a)=>a.indexOf(v)===i).join('_')+'_세트')
+    : (stripBrand(d.product_name)+'_'+norm(d.volume));
+  const safe = nameSrc.replace(/\s+/g,'_').replace(/[\\/:*?"<>|]/g,'').replace(/_+$/,'') || 'banner';
+  const a = document.createElement('a');
+  a.download = `${safe}.jpg`;
+  a.href = c.toDataURL('image/jpeg', .92);
+  a.click();
+};
+
+/* ---- 상태 ---- */
+function flag(id, kind, msg){
+  const el = $(id);
+  if (!kind){ el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="flag ${kind}"></div>`;
+  el.firstChild.textContent = msg;
+}
+function setBusy(b, txt){
+  S.busy = b;
+  $('statusTxt').textContent = b ? (txt||'처리 중') : '';
+}
+function syncTails(){
+  $('imgTail').textContent = S.cutout ? '등록됨' : '';
+}
+function dimsText(){
+  const c = $('preview');
+  if (!c.width) return '';
+  return `1200 × ${c.height}px` + (S.scale===2 ? '  →  저장 시 2400px' : '');
+}
+function buildRenderData(){
+  if (S.mode !== 'set') return S.data;
+  const shared = S.data || {usage:[], ingredients:[], caution:{items:[],sub_items:{}}, footer:{}};
+  return {
+    mode: 'set',
+    brand: $('setBrand').value,
+    components: S.components.map(c=>({name:c.name, volume:c.volume, tag:c.tag})),
+    usage: shared.usage, ingredients: shared.ingredients, caution: shared.caution,
+    footer: {cs_phone: shared.footer.cs_phone, seller: shared.footer.seller,
+             manufacturers: S.manufacturers}
+  };
+}
+
+function draw(){
+  if (!S.data) return;
+  const d = buildRenderData();
+
+  const {errs, warns} = validate(d);
+  $('empty').classList.add('hide');
+  $('preview').classList.remove('hide');
+  renderBanner($('preview'), d, currentCutouts(), S.color, S.textMode, 1);
+  $('dims').textContent = dimsText();
+  $('btnSave').disabled = false;
+  $('cntTail').textContent =
+    `성분 ${(d.ingredients||[]).length} · 사용법 ${(d.usage||[]).length}`;
+  if (errs.length)        flag('readFlag','w', errs.join(' '));
+  else if (warns.length)  flag('readFlag','w', warns.join(' '));
+  ['n3','n4'].forEach(id=>$(id).classList.remove('off'));
+}
+
+/* ---- 초기화 ---- */
+setLine(LINES[0]);
+setScale(1);
+loadFonts();
+document.fonts.ready.then(()=>{ wcache.clear(); if (S.data) draw(); });
+</script>
